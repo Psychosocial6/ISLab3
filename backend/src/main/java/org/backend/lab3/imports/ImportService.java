@@ -1,6 +1,7 @@
 package org.backend.lab3.imports;
 
 import lombok.RequiredArgsConstructor;
+import org.backend.lab3.cache.TrackCache;
 import org.backend.lab3.imports.dto.ImportLog;
 import org.backend.lab3.security.Role;
 import org.backend.lab3.user.User;
@@ -15,6 +16,7 @@ public class ImportService {
     private final ImportRepository importRepository;
     private final ImportLogMapper importLogMapper;
 
+    @TrackCache
     public List<ImportLog> getImportHistory(User user) {
         if (user.getRole() == Role.ROLE_USER) {
             return importRepository.findByUserId(user.getId())

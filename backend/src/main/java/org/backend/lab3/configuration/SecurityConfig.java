@@ -47,6 +47,7 @@ public class SecurityConfig {
                                 "/ws/**",
                                 "/druid/**")
                         .permitAll()
+                        .requestMatchers("/api/cache/**").hasRole("ADMIN")
                         .anyRequest()
                         .authenticated()
                 ).addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

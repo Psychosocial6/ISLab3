@@ -2,6 +2,7 @@ package org.backend.lab3.persons;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.backend.lab3.cache.TrackCache;
 import org.backend.lab3.coordinates.CoordinatesEntity;
 import org.backend.lab3.coordinates.CoordinatesRepository;
 import org.backend.lab3.coordinates.dto.CoordinatesRequest;
@@ -46,6 +47,7 @@ public class PersonService {
     private final ImportValidator importValidator;
     private final SimpMessagingTemplate messagingTemplate;
 
+    @TrackCache
     public Page<PersonResponse> getPersons(Pageable pageable, String name) {
         if (name == null) {
             return personRepository.findAll(pageable).map(personMapper::fromEntity);
@@ -54,6 +56,7 @@ public class PersonService {
 
     }
 
+    @TrackCache
     public PersonResponse getPersonById(Long id) {
         return personRepository.findById(id)
                 .map(personMapper::fromEntity)
@@ -79,7 +82,7 @@ public class PersonService {
                 personRequest.nationality()
         );
 
-        PersonResponse response = personMapper.fromEntity(personRepository.saveAndFlush(personEntity));
+        PersonResponse response = personMapper.fromEntity(personRepository.save(personEntity));
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -325,7 +328,7 @@ public class PersonService {
                 personRequest.coordinates().x(),
                 personRequest.coordinates().y()
         );
-        return coordinatesRepository.saveAndFlush(coordinates);
+        return coordinatesRepository.save(coordinates);
     }
 
     private LocationEntity resolveLocation(PersonRequest personRequest) {
@@ -347,7 +350,7 @@ public class PersonService {
                     location.y(),
                     location.z()
             );
-            return locationRepository.saveAndFlush(locationEntity);
+            return locationRepository.save(locationEntity);
         }
         return null;
     }

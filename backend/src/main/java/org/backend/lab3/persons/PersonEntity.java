@@ -1,5 +1,6 @@
 package org.backend.lab3.persons;
 
+import jakarta.persistence.Cacheable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,6 +19,8 @@ import org.backend.lab3.coordinates.CoordinatesEntity;
 import org.backend.lab3.enums.Color;
 import org.backend.lab3.enums.Country;
 import org.backend.lab3.locations.LocationEntity;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
@@ -28,6 +31,8 @@ import java.time.ZonedDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "person")
+@Cacheable
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class PersonEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
