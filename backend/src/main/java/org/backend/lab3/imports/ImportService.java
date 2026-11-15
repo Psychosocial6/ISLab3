@@ -7,6 +7,8 @@ import org.backend.lab3.security.Role;
 import org.backend.lab3.user.User;
 import org.backend.lab3.utils.ImportLogMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -31,8 +33,15 @@ public class ImportService {
 
     }
 
-    public ImportLog logImport(ImportStatus status, Long userId, Long addedCount) {
-        ImportLogEntity importLogEntity = new ImportLogEntity(status, userId, addedCount);
+    @Transactional(propagation = Propagation.MANDATORY)
+    public ImportLog logSuccessImport(Long userId, Long addedCount, String fileName) {
+        ImportLogEntity importLogEntity = new ImportLogEntity(ImportStatus.SUCCESS, userId, addedCount, fileName);
+        return importLogMapper.fromEntity(importRepository.save(importLogEntity));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public ImportLog logFailedImport(Long userId, Long addedCount, String fileName) {
+        ImportLogEntity importLogEntity = new ImportLogEntity(ImportStatus.FAILED, userId, addedCount, fileName);
         return importLogMapper.fromEntity(importRepository.save(importLogEntity));
     }
 }

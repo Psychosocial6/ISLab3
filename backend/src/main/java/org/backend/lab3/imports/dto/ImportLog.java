@@ -6,6 +6,7 @@ public record ImportLog(
         Long id,
         ImportStatus status,
         Long userId,
-        Long addedCount
+        Long addedCount,
+        String fileName
 ) {
 }

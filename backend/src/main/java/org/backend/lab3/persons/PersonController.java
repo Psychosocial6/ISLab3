@@ -7,10 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.backend.lab3.enums.Color;
 import org.backend.lab3.enums.Country;
-import org.backend.lab3.imports.ImportService;
-import org.backend.lab3.imports.ImportStatus;
 import org.backend.lab3.persons.dto.PersonRequest;
 import org.backend.lab3.persons.dto.PersonResponse;
+import org.backend.lab3.transaction.TransactionCoordinator;
 import org.backend.lab3.user.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,7 +39,7 @@ import java.util.Map;
 @RestController
 public class PersonController {
     private final PersonService personService;
-    private final ImportService importService;
+    private final TransactionCoordinator coordinator;
 
     @GetMapping
     public ResponseEntity<Page<PersonResponse>> getPersons(
@@ -141,17 +140,11 @@ public class PersonController {
             @AuthenticationPrincipal User user
     ) {
         log.info("importPersons called");
-        try {
-            String name = file.getOriginalFilename();
-            if (name == null || !name.endsWith(".json")) {
-                throw new IllegalArgumentException("Incorrect import file format");
-            }
-            List<PersonResponse> personResponses = personService.importPersons(file);
-            importService.logImport(ImportStatus.SUCCESS, user.getId(), (long) personResponses.size());
-            return ResponseEntity.status(HttpStatus.CREATED).body(personResponses);
-        } catch (Exception e) {
-            importService.logImport(ImportStatus.FAILED, user.getId(), null);
-            throw e;
+        String name = file.getOriginalFilename();
+        if (name == null || !name.endsWith(".json")) {
+            throw new IllegalArgumentException("Incorrect import file format");
         }
+        List<PersonResponse> responses = coordinator.importPersons(file, user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responses);
     }
 }

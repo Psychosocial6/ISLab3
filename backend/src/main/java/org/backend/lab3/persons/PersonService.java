@@ -25,10 +25,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -277,11 +277,9 @@ public class PersonService {
         return Map.of("percentage", percentage);
     }
 
-    @Transactional(isolation = Isolation.SERIALIZABLE)
-    public List<PersonResponse> importPersons(MultipartFile file) {
-        List<PersonRequest> personRequests = importMapper.parseRequest(file);
+    @Transactional(propagation = Propagation.MANDATORY)
+    public List<PersonResponse> importPersons(List<PersonRequest> personRequests) {
         List<PersonResponse> personResponses = new ArrayList<>();
-        importValidator.validateImport(personRequests);
         for (PersonRequest personRequest : personRequests) {
             PersonEntity personEntity = new PersonEntity(
                     personRequest.name(),

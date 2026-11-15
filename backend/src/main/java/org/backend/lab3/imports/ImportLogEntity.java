@@ -23,20 +23,23 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
 public class ImportLogEntity {
-    @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
-    ImportStatus status;
-    @Column(name = "user_id", nullable = false)
-    Long userId;
-    @Column(name = "added_count")
-    Long addedCount;
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
     private Long id;
+    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private ImportStatus status;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+    @Column(name = "added_count")
+    private Long addedCount;
+    @Column(name = "file_name")
+    private String fileName;
 
-    public ImportLogEntity(ImportStatus status, Long userId, Long addedCount) {
+    public ImportLogEntity(ImportStatus status, Long userId, Long addedCount, String fileName) {
         this.status = status;
         this.userId = userId;
         this.addedCount = addedCount;
+        this.fileName = fileName;
     }
 }

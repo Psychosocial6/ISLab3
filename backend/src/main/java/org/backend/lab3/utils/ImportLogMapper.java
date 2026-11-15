@@ -11,7 +11,8 @@ public class ImportLogMapper {
                 importLogEntity.getId(),
                 importLogEntity.getStatus(),
                 importLogEntity.getUserId(),
-                importLogEntity.getAddedCount()
+                importLogEntity.getAddedCount(),
+                importLogEntity.getFileName()
         );
     }
 }

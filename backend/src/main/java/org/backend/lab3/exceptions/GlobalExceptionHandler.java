@@ -2,6 +2,7 @@ package org.backend.lab3.exceptions;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.backend.lab3.exceptions.custom.MinioOperationException;
 import org.backend.lab3.exceptions.custom.NotFoundException;
 import org.backend.lab3.exceptions.custom.UserAlreadyExistsException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -172,6 +173,18 @@ public class GlobalExceptionHandler {
         log.warn("User already exists");
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exceptionResponse);
+    }
+
+    @ExceptionHandler(MinioOperationException.class)
+    public ResponseEntity<ExceptionResponse> handleMinioOperationException(MinioOperationException ex) {
+        ExceptionResponse exceptionResponse = new ExceptionResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                ex.getMessage(),
+                LocalDateTime.now()
+        );
+        log.error("MinioOperationException: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exceptionResponse);
     }
 
     @ExceptionHandler(Exception.class)
