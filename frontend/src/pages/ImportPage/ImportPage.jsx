@@ -6,6 +6,7 @@ export default function ImportPage() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [downloadingFile, setDownloadingFile] = useState(null);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
 
@@ -65,6 +66,28 @@ export default function ImportPage() {
         }
     };
 
+    const handleDownloadFile = async (fileName) => {
+        if (!fileName) return;
+
+        setDownloadingFile(fileName);
+        try {
+            const blob = await api.downloadImportFile(fileName);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Download error:', err);
+            alert('Failed to download file: ' + err.message);
+        } finally {
+            setDownloadingFile(null);
+        }
+    };
+
     return (
         <div className="import-page">
             <h2>Import From File</h2>
@@ -111,12 +134,13 @@ export default function ImportPage() {
                             <th>Status</th>
                             <th>User ID</th>
                             <th>Added Objects</th>
+                            <th>File</th>
                         </tr>
                         </thead>
                         <tbody>
                         {history.length === 0 ? (
                             <tr>
-                                <td colSpan="4" className="empty-row">No import operations yet</td>
+                                <td colSpan="5" className="empty-row">No import operations yet</td>
                             </tr>
                         ) : (
                             history.map((log) => (
@@ -129,6 +153,20 @@ export default function ImportPage() {
                                     </td>
                                     <td>{log.userId}</td>
                                     <td>{log.addedCount !== null ? log.addedCount : '-'}</td>
+                                    <td>
+                                        {log.fileName ? (
+                                            <button
+                                                className="btn-download"
+                                                onClick={() => handleDownloadFile(log.fileName)}
+                                                disabled={downloadingFile === log.fileName}
+                                                title={`Download ${log.fileName}`}
+                                            >
+                                                {downloadingFile === log.fileName ? 'Downloading...' : 'Download'}
+                                            </button>
+                                        ) : (
+                                            <span className="no-file">—</span>
+                                        )}
+                                    </td>
                                 </tr>
                             ))
                         )}

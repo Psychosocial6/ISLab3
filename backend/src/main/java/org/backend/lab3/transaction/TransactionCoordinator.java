@@ -19,38 +19,76 @@ public class TransactionCoordinator {
     private final ImportService importService;
 
     public List<PersonResponse> importPersons(MultipartFile file, User user) {
-        String fileKey = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        TransactionContext context = new TransactionContext(fileKey, file, user);
+        int maxAttempts = 5;
 
-        boolean minioReady = minioParticipant.prepare(context);
-        if (!minioReady) {
-            minioParticipant.rollback(context);
-            throw new MinioOperationException("MinIO preparation failed");
-        }
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            String fileKey = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            TransactionContext context = new TransactionContext(fileKey, file, user);
 
-        boolean dbReady = dbParticipant.prepare(context);
-        if (dbReady) {
+            boolean minioReady = minioParticipant.prepare(context);
+            if (!minioReady) {
+                minioParticipant.rollback(context);
+                throw new MinioOperationException("MinIO preparation failed");
+            }
+
+            boolean dbReady = false;
             try {
-                minioParticipant.commit(context);
-                dbParticipant.commit(context);
-                return context.getResponses();
+                dbReady = dbParticipant.prepare(context);
             } catch (Exception e) {
-                dbParticipant.rollback(context);
-                minioParticipant.rollback(context);
-                throw new RuntimeException("Commit failed", e);
+                context.setError(e);
             }
-        } else {
-            dbParticipant.rollback(context);
-            Exception error = context.getError();
-
-            if (error instanceof IllegalArgumentException) {
-                minioParticipant.commit(context);
-                importService.logFailedImport(user.getId(), 0L, context.getFileKey());
-                throw (IllegalArgumentException) error;
+            if (dbReady) {
+                try {
+                    minioParticipant.commit(context);
+                    dbParticipant.commit(context);
+                    return context.getResponses();
+                } catch (Exception e) {
+                    dbParticipant.rollback(context);
+                    minioParticipant.rollback(context);
+                    if (isSerializationError(e) && attempt < maxAttempts) {
+                        retrySleep();
+                        continue;
+                    }
+                    throw new RuntimeException("Commit failed", e);
+                }
             } else {
-                minioParticipant.rollback(context);
-                throw new RuntimeException("Database failed during import", error);
+                dbParticipant.rollback(context);
+                Exception error = context.getError();
+
+                if (isSerializationError(error) && attempt < maxAttempts) {
+                    minioParticipant.rollback(context);
+                    retrySleep();
+                    continue;
+                }
+
+                if (error instanceof IllegalArgumentException) {
+                    minioParticipant.commit(context);
+                    importService.logFailedImport(user.getId(), 0L, context.getFileKey());
+                    throw (IllegalArgumentException) error;
+                } else {
+                    minioParticipant.rollback(context);
+                    throw new RuntimeException("Database failed during import", error);
+                }
             }
+        }
+        throw new RuntimeException("Import failed");
+    }
+
+    private boolean isSerializationError(Throwable t) {
+        while (t != null) {
+            if (t.getMessage() != null && t.getMessage().contains("could not serialize access")) {
+                return true;
+            }
+            t = t.getCause();
+        }
+        return false;
+    }
+
+    private void retrySleep() {
+        try {
+            Thread.sleep((long) ((long) 100 + Math.random() * 50));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }

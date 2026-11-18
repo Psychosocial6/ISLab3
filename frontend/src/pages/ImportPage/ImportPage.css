@@ -131,3 +131,31 @@
     color: #dc2626;
     border: 1px solid #fca5a5;
 }
+
+.btn-download {
+    background-color: #f8fafc;
+    color: #0284c7;
+    border: 1px solid #cbd5e1;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-download:hover:not(:disabled) {
+    background-color: #e0f2fe;
+    border-color: #38bdf8;
+    color: #0369a1;
+}
+
+.btn-download:disabled {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+    cursor: wait;
+}
+
+.no-file {
+    color: #94a3b8;
+}

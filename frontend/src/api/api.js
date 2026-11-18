@@ -64,5 +64,23 @@ export const api = {
         method: 'POST',
         body: formData
     }),
-    getImportHistory: () => request('/api/import/history')
+    getImportHistory: () => request('/api/import/history'),
+    downloadImportFile: async (fileName) => {
+        const token = localStorage.getItem('token');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${BASE_URL}/api/import/download/${encodeURIComponent(fileName)}`, {
+            method: 'GET',
+            headers,
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to download file');
+        }
+
+        return await response.blob();
+    }
 };

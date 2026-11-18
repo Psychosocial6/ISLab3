@@ -16,13 +16,14 @@ import org.backend.lab3.locations.LocationRepository;
 import org.backend.lab3.locations.dto.LocationRequest;
 import org.backend.lab3.persons.dto.PersonRequest;
 import org.backend.lab3.persons.dto.PersonResponse;
-import org.backend.lab3.utils.ImportMapper;
-import org.backend.lab3.utils.ImportValidator;
 import org.backend.lab3.utils.PersonMapper;
 import org.backend.lab3.websocket.Event;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -43,8 +44,6 @@ public class PersonService {
     private final CoordinatesRepository coordinatesRepository;
     private final LocationRepository locationRepository;
     private final PersonMapper personMapper;
-    private final ImportMapper importMapper;
-    private final ImportValidator importValidator;
     private final SimpMessagingTemplate messagingTemplate;
 
     @TrackCache
@@ -63,6 +62,11 @@ public class PersonService {
                 .orElseThrow(() -> new PersonNotFoundException(id));
     }
 
+    @Retryable(
+            retryFor = {CannotAcquireLockException.class},
+            maxAttempts = 5,
+            backoff = @Backoff(delay = 100, multiplier = 1.5)
+    )
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public PersonResponse createPerson(PersonRequest personRequest) {
         if (personRepository.existsByName(personRequest.name())) {
@@ -188,14 +192,16 @@ public class PersonService {
                 .orElseThrow(() -> new PersonNotFoundException(id));
         PersonEntity transferPersonEntity = personRepository.findById(transferToId)
                 .orElseThrow(() -> new PersonNotFoundException(transferToId));
-        transferPersonEntity.setCoordinates(personEntity.getCoordinates());
-        if (personEntity.getLocation() != null) {
-            transferPersonEntity.setLocation(personEntity.getLocation());
-        }
-        PersonResponse updated = personMapper.fromEntity(personRepository.save(transferPersonEntity));
+        CoordinatesEntity coordinatesToTransfer = personEntity.getCoordinates();
+        LocationEntity locationToTransfer = personEntity.getLocation();
         Long deletedId = personEntity.getId();
         personRepository.delete(personEntity);
-
+        personRepository.flush();
+        transferPersonEntity.setCoordinates(coordinatesToTransfer);
+        if (locationToTransfer != null) {
+            transferPersonEntity.setLocation(locationToTransfer);
+        }
+        PersonResponse updated = personMapper.fromEntity(personRepository.save(transferPersonEntity));
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
